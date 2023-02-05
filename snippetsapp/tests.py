@@ -1,18 +1,40 @@
-from django.test import TestCase
+from django.test import TestCase, Client, RequestFactory
 from django.http import HttpRequest
 from django.urls import resolve
+from django.contrib.auth import get_user_model
 
+from snippetsapp.models import Snippet
+from snippetsapp.views import top
 from snippetsapp.views import top, snippet_new, snippet_edit, snippet_detail
 
+UserModel = get_user_model()
+
 # Create your tests here.     
-class TopPageTest(TestCase):
-    def test_top_returns_200(self):
-        response = self.client.get("/")
-        self.assertEqual(response.status_code, 200)
+class TopPageRenderSnippetsTest(TestCase):
+    def setUp(self):
+        self.user = UserModel.objects.create(
+            username='test_user',
+            email='test@example.com',
+            password='test_password'
+        )
+        self.snippet = Snippet.objects.create(
+            title='test_title',
+            code='test_code',
+            description='test_description',
+            created_by=self.user
+        )
+            
+    def test_should_return_snippet_title(self):
+        request = RequestFactory().get('/')
+        request.user = self.user
+        response = top(request)
+        self.assertContains(response, self.snippet.title)
         
-    def test_top_returns_expected_content(self):
-        response = self.client.get("/")
-        self.assertEqual(response.content, b"Hello World")
+    def test_should_return_username(self):
+        request = RequestFactory().get('/')
+        request.user = self.user
+        response = top(request)
+        self.assertContains(response, self.user.username)
         
 class CreateSnippetTest(TestCase):
     def test_should_resolve_snippet_new(self):
